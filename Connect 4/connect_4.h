@@ -7,14 +7,6 @@ enum class slot
 	player_b
 };
 
-struct player
-{
-	virtual int make_move() = 0;
-	virtual void game_set_notify(slot player_position) = 0;
-	virtual void invalid_move_notify() = 0;
-	virtual void game_state_notify(board_data board) = 0;
-};
-
 enum class game_state
 {
 	not_ready,
@@ -40,6 +32,14 @@ struct board_data
 	board_data();
 };
 
+struct player
+{
+	virtual int make_move() = 0;
+	virtual void game_set_notify(slot player_position) = 0;
+	virtual void invalid_move_notify() = 0;
+	virtual void game_state_notify(board_data board) = 0;
+};
+
 struct connect_4
 {
 private:
@@ -54,6 +54,17 @@ private:
 
 	void fetch_moves(player* player_ptr, int* result);
 
+	/// <summary>
+	/// Makes the move on the board. Changes `which_players_turn` to empty
+	/// </summary>
+	/// <param name="move"> - Column number</param>
+	void make_move(int move);
+
+	/// <summary>
+	/// Looks at the state of the board and determines which player, if any, won. If both players won, it is a tie
+	/// </summary>
+	void update_game_state();
+
 public:
 
 	int start();
@@ -62,7 +73,7 @@ public:
 	~connect_4();
 
 	void set_player_a(player* new_player_a);
-	void set_player_b(player* new_player_a);
+	void set_player_b(player* new_player_b);
 
 	bool is_move_valid(int move);
 

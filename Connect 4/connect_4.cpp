@@ -3,13 +3,16 @@
 #include <thread>
 #include <chrono>
 
+#define COLUMNS 7
+#define ROWS 6
+
 board_data::board_data()
 {
-	for (int i = 0; i < 7; i++)
+	for (int column = 0; column < COLUMNS; column++)
 	{
-		for (int j = 0; j < 6; j++)
+		for (int row = 0; row < ROWS; row++)
 		{
-			grid[i][j] = slot::empty;
+			grid[column][row] = slot::empty;
 		}
 	}
 }
@@ -24,12 +27,180 @@ void connect_4::fetch_moves(player* player_ptr, int* result)
 	} while (!is_move_valid(*result) && attempts < 1000);
 }
 
+void connect_4::make_move(int move)
+{
+	if (!is_move_valid(move) || board.which_players_turn == slot::empty)
+	{
+		return;
+	}
+	for (int row = 0; row < ROWS; row++)
+	{
+		if (board.grid[move][row] == slot::empty)
+		{
+			board.grid[move][row] = board.which_players_turn;
+			board.which_players_turn = slot::empty;
+			board.move++;
+			break;
+		}
+	}
+	update_game_state();
+}
+
+void connect_4::update_game_state()
+{
+	bool player_a_won = false;
+	bool player_b_won = false;
+
+	// Checking all horizontal lines
+	for (int row = 0; row < ROWS; row++)
+	{
+		for (int column = 0; column < COLUMNS - 4; column++)
+		{
+			if
+			(	
+				!player_a_won &&
+				board.grid[column    ][row] == slot::player_a &&
+				board.grid[column + 1][row] == slot::player_a &&
+				board.grid[column + 2][row] == slot::player_a &&
+				board.grid[column + 3][row] == slot::player_a
+			)
+			{
+				player_a_won = true;
+			}
+			if
+			(
+				!player_b_won &&
+				board.grid[column    ][row] == slot::player_b &&
+				board.grid[column + 1][row] == slot::player_b &&
+				board.grid[column + 2][row] == slot::player_b &&
+				board.grid[column + 3][row] == slot::player_b
+			)
+			{
+				player_b_won = true;
+			}
+		}
+	}
+
+	// Checking all vertical lines
+	for (int column = 0; column < COLUMNS; column++)
+	{
+		for (int row = 0; row < ROWS - 4; row++)
+		{
+			if
+			(
+				!player_a_won &&
+				board.grid[column][row    ] == slot::player_a &&
+				board.grid[column][row + 1] == slot::player_a &&
+				board.grid[column][row + 2] == slot::player_a &&
+				board.grid[column][row + 3] == slot::player_a
+			)
+			{
+				player_a_won = true;
+			}
+			if
+			(
+				!player_b_won &&
+				board.grid[column][row    ] == slot::player_b &&
+				board.grid[column][row + 1] == slot::player_b &&
+				board.grid[column][row + 2] == slot::player_b &&
+				board.grid[column][row + 3] == slot::player_b
+			)
+			{
+				player_b_won = true;
+			}
+		}
+	}
+
+	// Cheking all diagonal lines
+	for (int column = 0; column < COLUMNS - 4; column++)
+	{
+		for (int row = 0; row < ROWS - 4; row++)
+		{
+			if
+			(
+				!player_a_won &&
+				board.grid[column    ][row    ] == slot::player_a &&
+				board.grid[column + 1][row + 1] == slot::player_a &&
+				board.grid[column + 2][row + 2] == slot::player_a &&
+				board.grid[column + 3][row + 3] == slot::player_a
+			)
+			{
+				player_a_won = true;
+			}
+			if
+			(
+				!player_b_won &&
+				board.grid[column    ][row    ] == slot::player_b &&
+				board.grid[column + 1][row + 1] == slot::player_b &&
+				board.grid[column + 2][row + 2] == slot::player_b &&
+				board.grid[column + 3][row + 3] == slot::player_b
+			)
+			{
+				player_b_won = true;
+			}
+		}
+	}
+	for (int column = 0; column < COLUMNS - 4; column++)
+	{
+		for (int row = 4; row < ROWS; row++)
+		{
+			if
+			(
+				!player_a_won &&
+				board.grid[column    ][row    ] == slot::player_a &&
+				board.grid[column + 1][row - 1] == slot::player_a &&
+				board.grid[column + 2][row - 2] == slot::player_a &&
+				board.grid[column + 3][row - 3] == slot::player_a
+			)
+			{
+				player_a_won = true;
+			}
+			if
+			(
+				!player_b_won &&
+				board.grid[column    ][row    ] == slot::player_b &&
+				board.grid[column + 1][row - 1] == slot::player_b &&
+				board.grid[column + 2][row - 2] == slot::player_b &&
+				board.grid[column + 3][row - 3] == slot::player_b
+			)
+			{
+				player_b_won = true;
+			}
+		}
+	}
+
+
+	if (!player_a_won || !player_b_won)	// None won
+	{
+		return;
+	}
+
+	if (player_a_won && player_b_won)	// Both won
+	{
+		board.state = game_state::tie;
+		return;
+	}
+
+	if (player_a_won)					// player_a won
+	{
+		board.state = game_state::player_a_won;
+		return;
+	}
+
+	if (player_b_won)					// player_b won
+	{
+		board.state = game_state::player_b_won;
+		return;
+	}
+}
+
 int connect_4::start()
 {
+	board.state = game_state::not_ready;
+
 	// Setting players
 	if (!player_a || !player_b)
 	{
-		board.state = game_state::not_ready;
 		return -1;
 	}
 	player_a->game_set_notify(slot::player_a);
@@ -37,11 +208,12 @@ int connect_4::start()
 
 	// Setting the board
 	board.move = 0;
-	for (int i = 0; i < 7; i++)
+	board.which_players_turn = slot::player_a;
+	for (int column = 0; column < COLUMNS; column++)
 	{
-		for (int j = 0; j < 6; j++)
+		for (int row = 0; row < ROWS; row++)
 		{
-			board.grid[i][j] = slot::empty;
+			board.grid[column][row] = slot::empty;
 		}
 	}
 	board.state = game_state::ready;
@@ -56,17 +228,45 @@ int connect_4::start()
 	{
 		// player_a turn
 		choice_a = -1;
+		board.which_players_turn = slot::player_a;
 		move_timer.start();
 		while (move_timer.elapsed_seconds() < max_waiting_time)
 		{
-			std::thread move_thread(&connect_4::fetch_moves, player_a, &choice_a);
+			std::thread move_thread(&connect_4::fetch_moves, this, player_a, &choice_a);
 			if (is_move_valid(choice_a))
 			{
 				break;
 			}
 		}
 		//std::terminate(move_thread);
+		move_timer.stop();
+		make_move(choice_a);
+		board.which_players_turn = slot::player_b;
+		update_game_state();
+
+		// player_b turn
+		choice_b = -1;
+		board.which_players_turn = slot::player_b;
+		move_timer.start();
+		while (move_timer.elapsed_seconds() < max_waiting_time)
+		{
+			std::thread move_thread(&connect_4::fetch_moves, this, player_b, &choice_b);
+			if (is_move_valid(choice_b))
+			{
+				break;
+			}
+		}
+		//std::terminate(move_thread);
+		move_timer.stop();
+		make_move(choice_b);
+		board.which_players_turn = slot::player_a;
+		update_game_state();
 	}
+
+	player_a->game_state_notify(board);
+	player_b->game_state_notify(board);
+
+	return 0;
 }
 
 connect_4::connect_4()
@@ -108,7 +308,7 @@ void connect_4::set_player_b(player* new_player_b)
 
 bool connect_4::is_move_valid(int move)
 {
-	return move >= 0 && move <= 7 && board.grid[move][6] == slot::empty;
+	return move >= 0 && move < COLUMNS && board.grid[move][ROWS - 1] == slot::empty;
 }
 
 board_data connect_4::get_board_state()
