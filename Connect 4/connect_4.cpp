@@ -218,7 +218,6 @@ void connect_4::update_game_state()
 
 void connect_4::game_loop()
 {
-
 	board.state = game_state::ongoing;
 
 	timer move_timer;
@@ -340,4 +339,20 @@ bool connect_4::is_move_valid(int move)
 board_data connect_4::get_board_state()
 {
 	return board;
+}
+
+void game_administrator::pause()
+{
+	if (game)
+	{
+		game->board.state = game_state::pause;
+	}
+}
+
+void game_administrator::unpause()
+{
+	if (game)
+	{
+		game->game_loop();
+	}
 }

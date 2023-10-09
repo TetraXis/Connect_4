@@ -38,6 +38,9 @@ struct game_administrator
 {
 	connect_4* game = nullptr;
 
+	void pause();
+	void unpause();
+
 	virtual void game_set_notify(slot player_position) = 0;
 	virtual void game_state_notify(board_data board) = 0;
 };
@@ -87,7 +90,7 @@ private:
 public:
 
 	/// <summary>
-	/// Sets up the game and runs it fully. If you want to control the flow use `game_administrator` class and `game_loop()`
+	/// Sets up the game and runs it fully. If you want to control the flow use `game_administrator`
 	/// </summary>
 	void start();
 
