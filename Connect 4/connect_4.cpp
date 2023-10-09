@@ -27,7 +27,7 @@ void connect_4::fetch_moves(player* player_ptr, int* result)
 	} while (!is_move_valid(*result) && attempts < 1000);
 }
 
-void connect_4::make_move(int move)
+void connect_4::make_move(int move, slot next_player)
 {
 	if (!is_move_valid(move) || board.which_players_turn == slot::empty)
 	{
@@ -38,7 +38,7 @@ void connect_4::make_move(int move)
 		if (board.grid[move][row] == slot::empty)
 		{
 			board.grid[move][row] = board.which_players_turn;
-			board.which_players_turn = slot::empty;
+			board.which_players_turn = next_player;
 			board.move++;
 			break;
 		}
@@ -172,36 +172,106 @@ void connect_4::update_game_state()
 
 	if (!player_a_won || !player_b_won)	// None won
 	{
+		if (administrator)
+		{
+			administrator->game_state_notify(board);
+		}
 		return;
 	}
 
 	if (player_a_won && player_b_won)	// Both won
 	{
 		board.state = game_state::tie;
+		player_a->game_state_notify(board);
+		player_b->game_state_notify(board);
+		if (administrator)
+		{
+			administrator->game_state_notify(board);
+		}
 		return;
 	}
 
 	if (player_a_won)					// player_a won
 	{
 		board.state = game_state::player_a_won;
+		player_a->game_state_notify(board);
+		player_b->game_state_notify(board);
+		if (administrator)
+		{
+			administrator->game_state_notify(board);
+		}
 		return;
 	}
 
 	if (player_b_won)					// player_b won
 	{
 		board.state = game_state::player_b_won;
+		player_a->game_state_notify(board);
+		player_b->game_state_notify(board);
+		if (administrator)
+		{
+			administrator->game_state_notify(board);
+		}
 		return;
 	}
 }
 
-int connect_4::start()
+void connect_4::game_loop()
+{
+
+	board.state = game_state::ongoing;
+
+	timer move_timer;
+	int choice;
+	player* player;
+	slot next_player;
+
+	while (board.state == game_state::ongoing)
+	{
+		choice = -1;
+		if (board.which_players_turn == slot::player_a)
+		{
+			player = player_a;
+			next_player = slot::player_b;
+		}
+		else if (board.which_players_turn == slot::player_b)
+		{
+			player = player_b;
+			next_player = slot::player_a;
+		}
+		else
+		{
+			board.state = game_state::not_ready;
+			if (administrator)
+			{
+				administrator->game_state_notify(board);
+			}
+			break;
+		}
+
+		move_timer.start();
+		while (move_timer.elapsed_seconds() < max_waiting_time)
+		{
+			std::thread move_thread(&connect_4::fetch_moves, this, player, &choice);
+			if (is_move_valid(choice))
+			{
+				break;
+			}
+		}
+		//std::terminate(move_thread);
+		move_timer.stop();
+		make_move(choice, next_player);
+	}
+}
+
+void connect_4::start()
 {
 	board.state = game_state::not_ready;
 
 	// Setting players
 	if (!player_a || !player_b)
 	{
-		return -1;
+		return;
 	}
 	player_a->game_set_notify(slot::player_a);
 	player_b->game_set_notify(slot::player_b);
@@ -217,56 +287,12 @@ int connect_4::start()
 		}
 	}
 	board.state = game_state::ready;
-
-	// Game loop
-	board.state = game_state::ongoing;
-
-	timer move_timer;
-	int choice_a, choice_b;
-
-	while (board.state == game_state::ongoing)
+	if (administrator)
 	{
-		// player_a turn
-		choice_a = -1;
-		board.which_players_turn = slot::player_a;
-		move_timer.start();
-		while (move_timer.elapsed_seconds() < max_waiting_time)
-		{
-			std::thread move_thread(&connect_4::fetch_moves, this, player_a, &choice_a);
-			if (is_move_valid(choice_a))
-			{
-				break;
-			}
-		}
-		//std::terminate(move_thread);
-		move_timer.stop();
-		make_move(choice_a);
-		board.which_players_turn = slot::player_b;
-		update_game_state();
-
-		// player_b turn
-		choice_b = -1;
-		board.which_players_turn = slot::player_b;
-		move_timer.start();
-		while (move_timer.elapsed_seconds() < max_waiting_time)
-		{
-			std::thread move_thread(&connect_4::fetch_moves, this, player_b, &choice_b);
-			if (is_move_valid(choice_b))
-			{
-				break;
-			}
-		}
-		//std::terminate(move_thread);
-		move_timer.stop();
-		make_move(choice_b);
-		board.which_players_turn = slot::player_a;
-		update_game_state();
+		administrator->game_state_notify(board);
 	}
 
-	player_a->game_state_notify(board);
-	player_b->game_state_notify(board);
-
-	return 0;
+	game_loop();
 }
 
 connect_4::connect_4()

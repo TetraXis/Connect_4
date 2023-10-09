@@ -32,6 +32,16 @@ struct board_data
 	board_data();
 };
 
+struct connect_4;
+
+struct game_administrator
+{
+	connect_4* game = nullptr;
+
+	virtual void game_set_notify(slot player_position) = 0;
+	virtual void game_state_notify(board_data board) = 0;
+};
+
 struct player
 {
 	virtual int make_move() = 0;
@@ -42,6 +52,9 @@ struct player
 
 struct connect_4
 {
+	friend struct game_administrator;
+	game_administrator* administrator = nullptr;
+
 private:
 
 	// Owns a pointer
@@ -55,19 +68,28 @@ private:
 	void fetch_moves(player* player_ptr, int* result);
 
 	/// <summary>
-	/// Makes the move on the board. Changes `which_players_turn` to empty
+	/// Makes the move on the board
 	/// </summary>
 	/// <param name="move"> - Column number</param>
-	void make_move(int move);
+	/// <param name="next_player"> - Who should be next</param>
+	void make_move(int move, slot next_player);
 
 	/// <summary>
 	/// Looks at the state of the board and determines which player, if any, won. If both players won, it is a tie
 	/// </summary>
 	void update_game_state();
 
+	/// <summary>
+	/// Runs the game move by move. When paused stops. You can resume the game by calling this method
+	/// </summary>
+	void game_loop();
+
 public:
 
-	int start();
+	/// <summary>
+	/// Sets up the game and runs it fully. If you want to control the flow use `game_administrator` class and `game_loop()`
+	/// </summary>
+	void start();
 
 	connect_4();
 	~connect_4();
