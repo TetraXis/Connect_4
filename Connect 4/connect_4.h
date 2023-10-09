@@ -32,6 +32,7 @@ struct board_data
 {
 	game_state state = game_state::not_ready;
 	unsigned int move = 0;
+	slot which_players_turn = slot::empty;
 
 	// 7 colums. 0th place is at the bottom
 	slot grid[7][6];
