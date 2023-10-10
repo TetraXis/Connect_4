@@ -169,16 +169,6 @@ void connect_4::update_game_state()
 		}
 	}
 
-
-	if (!player_a_won || !player_b_won)	// None won
-	{
-		if (administrator)
-		{
-			administrator->game_state_notify(board);
-		}
-		return;
-	}
-
 	if (player_a_won && player_b_won)	// Both won
 	{
 		board.state = game_state::tie;
@@ -208,6 +198,27 @@ void connect_4::update_game_state()
 		board.state = game_state::player_b_won;
 		player_a->game_state_notify(board);
 		player_b->game_state_notify(board);
+		if (administrator)
+		{
+			administrator->game_state_notify(board);
+		}
+		return;
+	}
+
+	if (!player_a_won || !player_b_won)	// None won
+	{
+		for (int column = 0; column < COLUMNS; column++) // Checking for empty slots
+		{
+			if (board.grid[column][ROWS - 1] == slot::empty)
+			{
+				if (administrator)
+				{
+					administrator->game_state_notify(board);
+				}
+				return;
+			}
+		}
+		board.state = game_state::tie;
 		if (administrator)
 		{
 			administrator->game_state_notify(board);
@@ -257,6 +268,17 @@ void connect_4::game_loop()
 				break;
 			}
 		}
+		if (choice == -1)
+		{
+			if (board.which_players_turn == slot::player_a)
+			{
+				board.state == game_state::player_a_timed_out;
+			}
+			else if (board.which_players_turn == slot::player_b)
+			{
+				board.state == game_state::player_a_timed_out;
+			}
+		}
 		//std::terminate(move_thread);
 		move_timer.stop();
 		make_move(choice, next_player);
@@ -301,34 +323,7 @@ connect_4::connect_4()
 
 connect_4::~connect_4()
 {
-	if (player_a)
-	{
-		delete player_a;
-	}
-	if (player_b)
-	{
-		delete player_b;
-	}
-}
 
-void connect_4::set_player_a(player* new_player_a)
-{
-	if (board.state == game_state::ongoing || board.state == game_state::pause)
-	{
-		board.state = game_state::player_a_disqualified;
-		return;
-	}
-	player_a = new_player_a;
-}
-
-void connect_4::set_player_b(player* new_player_b)
-{
-	if (board.state == game_state::ongoing || board.state == game_state::pause)
-	{
-		board.state = game_state::player_b_disqualified;
-		return;
-	}
-	player_b = new_player_b;
 }
 
 bool connect_4::is_move_valid(int move)
@@ -341,18 +336,18 @@ board_data connect_4::get_board_state()
 	return board;
 }
 
-void game_administrator::pause()
+void connect_4::pause()
 {
-	if (game)
+	if (board.state == game_state::ongoing)
 	{
-		game->board.state = game_state::pause;
+		board.state = game_state::pause;
 	}
 }
 
-void game_administrator::unpause()
+void connect_4::unpause()
 {
-	if (game)
+	if (board.state == game_state::pause)
 	{
-		game->game_loop();
+		game_loop();
 	}
 }

@@ -16,8 +16,8 @@ enum class game_state
 	player_a_won,
 	player_b_won,
 	tie,
-	player_a_disqualified,
-	player_b_disqualified
+	player_a_timed_out,
+	player_b_timed_out
 };
 
 struct board_data
@@ -38,9 +38,6 @@ struct game_administrator
 {
 	connect_4* game = nullptr;
 
-	void pause();
-	void unpause();
-
 	virtual void game_set_notify(slot player_position) = 0;
 	virtual void game_state_notify(board_data board) = 0;
 };
@@ -55,18 +52,15 @@ struct player
 
 struct connect_4
 {
-	friend struct game_administrator;
 	game_administrator* administrator = nullptr;
+	player* player_a = nullptr;
+	player* player_b = nullptr;
 
 private:
 
-	// Owns a pointer
-	player* player_a = nullptr;
-	// Owns a pointer
-	player* player_b = nullptr;
 	board_data board;
 	// Time in seconds. Player can make any amount of attemts during this time
-	float max_waiting_time = 1;
+	float max_waiting_time = 10;
 
 	void fetch_moves(player* player_ptr, int* result);
 
@@ -89,16 +83,17 @@ private:
 
 public:
 
+	connect_4();
+	~connect_4();
+
 	/// <summary>
 	/// Sets up the game and runs it fully. If you want to control the flow use `game_administrator`
 	/// </summary>
 	void start();
 
-	connect_4();
-	~connect_4();
+	void pause();
 
-	void set_player_a(player* new_player_a);
-	void set_player_b(player* new_player_b);
+	void unpause();
 
 	bool is_move_valid(int move);
 
